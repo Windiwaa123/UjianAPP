@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Super Exaam",
+    "slug": "UjianApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.windiwaa123.UjianApp"
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6217e3f2-3ba7-4602-a206-c3aa284a2d47"
+      }
+    },
+    "owner": "windiwaa123",
+    "plugins": [
+      "expo-image"
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// Aturan keamanan Firestore untuk UjianApp.
+// Tempel seluruh isi file ini di Firebase Console > Firestore Database > Rules, lalu klik Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function masuk() {
+      return request.auth != null;
+    }
+
+    // Admin = pengguna yang dokumen users/{uid}-nya berisi peran 'admin'.
+    // Dokumen admin pertama dibuat manual lewat Firebase Console.
+    function admin() {
+      return masuk()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.peran == 'admin';
+    }
+
+    // Profil pengguna. Siswa hanya bisa membaca profilnya sendiri dan TIDAK bisa mengubah apa pun
+    // (sehingga siswa tidak bisa mengganti perannya menjadi admin). Hanya admin yang membuat/mengubah profil.
+    match /users/{uid} {
+      allow read: if (masuk() && request.auth.uid == uid) || admin();
+      allow create, update, delete: if admin();
+    }
+
+    // Data ujian: dibaca semua pengguna yang sudah login, diubah hanya oleh admin.
+    match /kelas/{id} {
+      allow read: if masuk();
+      allow write: if admin();
+    }
+
+    match /bab/{id} {
+      allow read: if masuk();
+      allow write: if admin();
+    }
+
+    // Soal yang dibaca siswa TIDAK memuat kunci jawaban (hanya hash). Kunci asli ada di koleksi "kunci".
+    match /soal/{id} {
+      allow read: if masuk();
+      allow write: if admin();
+    }
+
+    // Kunci jawaban asli dan pedoman uraian: HANYA admin yang bisa membaca maupun menulis.
+    match /kunci/{id} {
+      allow read, write: if admin();
+    }
+
+    match /pengaturan/{id} {
+      allow read: if masuk();
+      allow write: if admin();
+    }
+
+    // Hasil ujian. Siswa boleh mengerjakan bab berulang kali: setiap percobaan adalah dokumen baru dengan
+    // ID "uidSiswa_idBab_nomorPercobaan". Siswa hanya boleh MEMBUAT dokumen (bukan mengubah / menghapus),
+    // jadi riwayat percobaan tidak bisa dipalsukan. Admin boleh menilai uraian (update) dan menghapus.
+    match /hasil/{id} {
+      allow read: if (masuk() && (resource == null || resource.data.siswaId == request.auth.uid)) || admin();
+      allow create: if masuk()
+        && request.resource.data.siswaId == request.auth.uid
+        && request.resource.data.percobaan is int
+        && id == request.auth.uid + '_' + request.resource.data.babId + '_' + string(request.resource.data.percobaan);
+      allow update, delete: if admin();
+    }
+
+    // Gambar soal dan lampiran jawaban (base64, sudah dikompres di aplikasi).
+    // Satu dokumen dibatasi sekitar 800 KB. Gambar tidak bisa diubah, hanya dibuat atau dihapus.
+    match /gambar/{nama} {
+      allow read: if masuk();
+      allow create: if masuk()
+        && request.resource.data.pemilik == request.auth.uid
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 800000;
+      allow delete: if masuk() && (resource.data.pemilik == request.auth.uid || admin());
+      allow update: if false;
+    }
+  }
+}
